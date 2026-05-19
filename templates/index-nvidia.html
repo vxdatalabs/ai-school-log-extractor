@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>School Daily Log - Google Drive Auto-Sync</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      color: #333;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    .header h1 { font-size: 32px; margin-bottom: 0.5rem; font-weight: 700; }
+    .header p { font-size: 16px; opacity: 0.9; }
+    .content { padding: 2rem; }
+    .step {
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: #f8f9fa;
+      border-radius: 10px;
+      border-left: 4px solid #667eea;
+    }
+    .step h2 {
+      font-size: 18px;
+      margin-bottom: 1rem;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .step-number {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      background: #667eea;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 28px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .step p { color: #666; margin-bottom: 1rem; font-size: 14px; }
+    .upload-box {
+      background: white;
+      border: 2px dashed #667eea;
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      margin: 1rem 0;
+    }
+    input[type="file"], input[type="text"] { display: none; }
+    .file-label, .text-label {
+      display: inline-block;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.2s;
+      margin: 0.5rem;
+    }
+    .file-label:hover, .text-label:hover { transform: scale(1.05); }
+    .input-group { margin: 1rem 0; }
+    .input-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 0.5rem; color: #333; }
+    .input-group input[type="text"] { display: block !important; width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin: 0.5rem 0.5rem 0.5rem 0;
+    }
+    button.primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    button.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    button.primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .status {
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin: 1rem 0;
+      font-size: 14px;
+    }
+    .status.success {
+      background: #e0ffe0;
+      color: #2d7a2d;
+      border: 1px solid #a5ffa5;
+    }
+    .status.error {
+      background: #ffe0e0;
+      color: #c92a2a;
+      border: 1px solid #ffa5a5;
+    }
+    .status.info {
+      background: #e7f5ff;
+      color: #1971c2;
+      border: 1px solid #a5d8ff;
+    }
+    .status.hidden { display: none; }
+    .result-item {
+      background: #f8f9fa;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      border-radius: 6px;
+      border-left: 4px solid #4caf50;
+    }
+    .result-item-title { font-weight: 600; color: #333; margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📋 School Daily Log</h1>
+      <p>Google Drive Auto-Sync - Upload photos, auto-extract to Google Sheet</p>
+    </div>
+
+    <div class="content">
+      <!-- Step 1: Upload Credentials -->
+      <div class="step">
+        <h2><span class="step-number">1</span> Upload Google Credentials</h2>
+        <p>Upload your OAuth client_secret.json file from Google Cloud Console</p>
+        
+        <div class="upload-box">
+          <input type="file" id="credFile" accept=".json">
+          <label for="credFile" class="file-label">📂 Choose JSON File</label>
+        </div>
+        
+        <div id="credStatus" class="status hidden"></div>
+      </div>
+
+      <!-- Step 2: Google Login -->
+      <div class="step">
+        <h2><span class="step-number">2</span> Login with Google</h2>
+        <p>Click to open Google login in your browser</p>
+        
+        <button class="primary" id="loginBtn" onclick="googleLogin()" style="display: none;">🔐 Login with Google</button>
+        
+        <div id="loginStatus" class="status hidden"></div>
+      </div>
+
+      <!-- Step 3: Set Folder -->
+      <div class="step">
+        <h2><span class="step-number">3</span> Set Google Drive Folder</h2>
+        <p>Enter the folder ID from your Google Drive</p>
+        
+        <div class="input-group">
+          <label>Folder ID</label>
+          <input type="text" id="folderId" placeholder="e.g., 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p">
+        </div>
+        
+        <button class="primary" onclick="setFolder()">✓ Set Folder</button>
+        
+        <div id="folderStatus" class="status hidden"></div>
+      </div>
+
+      <!-- Step 4: Analyze Template -->
+      <div class="step">
+        <h2><span class="step-number">4</span> Analyze Template Photo</h2>
+        <p>Upload a sample daily log photo</p>
+        
+        <div class="upload-box">
+          <input type="file" id="templateFile" accept="image/*">
+          <label for="templateFile" class="file-label">📸 Choose Template Photo</label>
+        </div>
+        
+        <button class="primary" onclick="analyzeTemplate()">🔍 Analyze Template</button>
+        
+        <div id="templateStatus" class="status hidden"></div>
+        <div id="templatePreview" style="margin-top: 1rem; display: none; background: white; padding: 1rem; border-radius: 6px;">
+          <strong style="color: #333;">Columns Found:</strong>
+          <div id="columnsDisplay" style="margin-top: 0.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;"></div>
+        </div>
+      </div>
+
+      <!-- Step 5: Scan Folder -->
+      <div class="step">
+        <h2><span class="step-number">5</span> Scan Folder & Extract</h2>
+        <p>Click to scan your Google Drive folder for new photos</p>
+        
+        <button class="primary" onclick="scanFolder()">🔄 Scan Folder & Extract</button>
+        
+        <div id="scanStatus" class="status hidden"></div>
+      </div>
+
+      <!-- Results -->
+      <div id="resultsSection" style="display: none; margin-top: 2rem;">
+        <h3 style="margin-bottom: 1rem;">✓ Extraction Results</h3>
+        <div id="resultsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showStatus(elementId, message, type) {
+      const el = document.getElementById(elementId);
+      el.className = `status ${type === 'hidden' ? 'hidden' : type}`;
+      el.textContent = message;
+    }
+
+    // File upload handler
+    document.getElementById('credFile')?.addEventListener('change', async (e) => {
+      if (!e.target.files.length) return;
+      
+      showStatus('credStatus', '⏳ Uploading...', 'info');
+      
+      try {
+        const formData = new FormData();
+        formData.append('file', e.target.files[0]);
+        
+        const response = await fetch('/api/upload-credentials', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          showStatus('credStatus', '✓ ' + result.message, 'success');
+          // Show login button
+          document.getElementById('loginBtn').style.display = 'block';
+          e.target.value = '';
+        } else {
+          showStatus('credStatus', '✗ ' + result.error, 'error');
+        }
+      } catch (error) {
+        showStatus('credStatus', '✗ Error: ' + error.message, 'error');
+      }
+    });
+
+    async function googleLogin() {
+      showStatus('loginStatus', '⏳ Opening Google login...', 'info');
+      
+      try {
+        const response = await fetch('/api/google-login', {
+          method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          showStatus('loginStatus', '✓ ' + result.message, 'success');
+        } else {
+          showStatus('loginStatus', '✗ ' + result.error, 'error');
+        }
+      } catch (error) {
+        showStatus('loginStatus', '✗ Error: ' + error.message, 'error');
+      }
+    }
+
+    async function setFolder() {
+      const folderId = document.getElementById('folderId').value.trim();
+      
+      if (!folderId) {
+        showStatus('folderStatus', '✗ Enter a folder ID', 'error');
+        return;
+      }
+      
+      showStatus('folderStatus', '⏳ Verifying folder...', 'info');
+      
+      try {
+        const response = await fetch('/api/set-folder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folder_id: folderId })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          showStatus('folderStatus', '✓ ' + result.message, 'success');
+          document.getElementById('folderId').disabled = true;
+        } else {
+          showStatus('folderStatus', '✗ ' + result.error, 'error');
+        }
+      } catch (error) {
+        showStatus('folderStatus', '✗ Error: ' + error.message, 'error');
+      }
+    }
+
+    async function analyzeTemplate() {
+      const file = document.getElementById('templateFile').files[0];
+      
+      if (!file) {
+        showStatus('templateStatus', '✗ Select a photo', 'error');
+        return;
+      }
+      
+      showStatus('templateStatus', '⏳ Analyzing photo...', 'info');
+      
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        const response = await fetch('/api/analyze-template', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          showStatus('templateStatus', '✓ Template analyzed successfully', 'success');
+          document.getElementById('templateFile').value = '';
+          
+          // Show columns
+          const cols = result.columns;
+          const display = document.getElementById('columnsDisplay');
+          display.innerHTML = cols.map(col => `<div style="background: #f0f0f0; padding: 8px; border-radius: 4px; font-size: 13px;">${col}</div>`).join('');
+          document.getElementById('templatePreview').style.display = 'block';
+        } else {
+          showStatus('templateStatus', '✗ ' + result.error, 'error');
+        }
+      } catch (error) {
+        showStatus('templateStatus', '✗ Error: ' + error.message, 'error');
+      }
+    }
+
+    async function scanFolder() {
+      showStatus('scanStatus', '⏳ Scanning folder and extracting data...', 'info');
+      
+      try {
+        const response = await fetch('/api/scan-folder', {
+          method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          showStatus('scanStatus', `✓ ${result.message}`, 'success');
+          
+          if (result.new_entries > 0) {
+            const resultsList = document.getElementById('resultsList');
+            resultsList.innerHTML = result.entries.map(entry => `
+              <div class="result-item">
+                <div class="result-item-title">📸 ${entry.filename}</div>
+                <div style="font-size: 12px; color: #666;">
+                  ${Object.entries(entry.data).map(([k, v]) => `<div><strong>${k}:</strong> ${v || '(empty)'}</div>`).join('')}
+                </div>
+              </div>
+            `).join('');
+            
+            document.getElementById('resultsSection').style.display = 'block';
+          } else {
+            showStatus('scanStatus', '✓ No new photos found', 'success');
+          }
+        } else {
+          showStatus('scanStatus', '✗ ' + result.error, 'error');
+        }
+      } catch (error) {
+        showStatus('scanStatus', '✗ Error: ' + error.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

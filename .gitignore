@@ -1,0 +1,36 @@
+# Secrets
+.env
+client_secret.json
+token.pickle
+google_credentials.json
+drive_config.json
+
+# Runtime generated data
+log_entries.json
+template.json
+processed_photos.json
+
+# Virtual env
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+
+# Build artifacts
+*.egg-info/
+
+# macOS
+.DS_Store# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
